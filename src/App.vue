@@ -1,81 +1,129 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
-</script>
-
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+    <div>
+        <form @submit.prevent="storeUser">
+            <label for="firstName" />
+            <input id="firstName" type="text" v-model="firstName" name="firstName" placeholder="Enter first name" required>
+            
+            <label for="lastName" />
+            <input id="lastName" type="text" v-model="lastName" name="lastName" placeholder="Enter last name" required>
+            
+            <button type="submit">Create user</button>
+        </form>
+        
+        <form @submit.prevent="findUser">
+            <label for="id" />
+            <input id="id" type="text" v-model="id" name="id" placeholder="Enter user ID" required>
+            
+            <button type="submit">Find user</button>
+        </form>
+        
+        <div v-if="watcherMessage.length">
+            <h4 class="heading">{{ watcherMessage }}</h4>
+            <div v-if="user !== undefined">
+                <div class="row">
+                    <div class="heading">Normal property:</div>
+                    <div>First name: {{ user.firstName }}</div>
+                </div>
+                
+                <div class="row">
+                    <div class="heading">Computed property:</div>
+                    <div>Full name: {{ fullName }}</div>
+                </div>
+            </div>
+            <div v-else>No user found...</div>
+        </div>
     </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
 </template>
 
-<style>
-@import './assets/base.css';
+<script lang="ts">
+    import { defineComponent } from 'vue'
+    
+    interface UserInterface {
+        firstName: String,
+        lastName: String,
+    }
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+    export default defineComponent({
+        name: 'App',
+        
+        data() {
+            return {
+                firstName: '' as string,
+                lastName: '' as string,
+                id: '' as string,
+                watcherMessage: '' as string,
+                user: {
+                    firstName: '',
+                    lastName: '',
+                } as UserInterface
+            }
+        },
+        
+        watch: {
+            user() {
+                const message: string = 'Results for user with ID: ' + this.id;
+                
+                this.watcherMessage = message;
+            }
+        },
+        
+        computed: {
+            fullName(): string {
+                return this.user.firstName + ' ' + this.user.lastName;
+            }
+        },
+        
+        methods: {
+            storeUser() {
+                const url: string = 'http://localhost:8000/users';
+                
+                const payload: object = {
+                    firstName: this.firstName,
+                    lastName: this.lastName
+                };
 
-  font-weight: normal;
-}
+                const data = new FormData();
+                
+                data.append('user', JSON.stringify(payload));
+                
+                fetch(url, {
+                    method: 'POST',
+                    body: data
+                })
+                .then(data => {
+                    return data.json();
+                })
+                .then(response => {
+                    console.log(response.message);
+                });
+            },
+            
+            findUser() {
+                const url: string = 'http://localhost:8000/users/' + this.id;
+                
+                fetch(url)
+                    .then(data => {
+                        return data.json();
+                    })
+                    .then(response => {
+                        this.user = response.user;
+                        this.watcherMessage = response.message;
+                    });
+            }
+        }
+    })
+</script>
 
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
-
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-}
+<style scoped>
+    .heading {
+        font-weight: bold;
+    }
+    
+    .row {
+        margin-bottom: 10px;
+    }
+    
+    form {
+        margin-bottom: 20px;
+    }
 </style>
